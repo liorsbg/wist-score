@@ -397,6 +397,22 @@
   }
   .undo-link:hover { color: var(--gold); }
 
+  .action-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .btn-subtle {
+    background: transparent;
+    color: var(--cream);
+    border: 1px solid rgba(212,168,67,0.35);
+  }
+  .btn-subtle:hover {
+    border-color: var(--gold);
+    color: var(--gold-light);
+  }
+
   .hidden { display: none !important; }
 
   .trick-sum {
@@ -483,7 +499,8 @@
       <div class="grid-4" id="declare-grid"></div>
       <div class="mt-12" id="trick-sum-display"></div>
       <div class="mt-12" id="over-under-display"></div>
-      <div class="text-center mt-16">
+      <div class="action-row mt-16">
+        <button class="btn btn-subtle" onclick="backToPart1()">Back</button>
         <button class="btn btn-gold" id="btn-to-part3" onclick="toPart3()" disabled>Lock Declarations</button>
       </div>
     </div>
@@ -496,7 +513,8 @@
       <div id="round-info2" style="font-size:0.85rem;color:var(--cream-dim);margin-bottom:16px;"></div>
       <div class="grid-4" id="actual-grid"></div>
       <div class="mt-12" id="actual-sum-display"></div>
-      <div class="text-center mt-16">
+      <div class="action-row mt-16">
+        <button class="btn btn-subtle" onclick="backToPart2()">Back</button>
         <button class="btn btn-gold" id="btn-score" onclick="scoreRound()" disabled>Score Round</button>
       </div>
     </div>
@@ -658,13 +676,20 @@ function checkPart1Ready() {
 /* ========== PART 2: DECLARATIONS ========== */
 
 function toPart2() {
-  state.currentRound = {
-    suit: selectedSuit,
-    starter: selectedStarter,
-    declarations: [null, null, null, null],
-    actuals: [null, null, null, null],
-    type: null,
-  };
+  const sameSetup =
+    state.currentRound &&
+    state.currentRound.suit === selectedSuit &&
+    state.currentRound.starter === selectedStarter;
+
+  if (!sameSetup) {
+    state.currentRound = {
+      suit: selectedSuit,
+      starter: selectedStarter,
+      declarations: [null, null, null, null],
+      actuals: [null, null, null, null],
+      type: null,
+    };
+  }
 
   const suitDisplay = selectedSuit === 'NT' ? 'No Trump' : selectedSuit;
   document.getElementById('round-info').innerHTML =
@@ -692,6 +717,7 @@ function buildDeclareGrid() {
 
   order.forEach((pIdx, orderPos) => {
     const isLast = orderPos === 3;
+    const existing = state.currentRound.declarations?.[pIdx];
     const card = document.createElement('div');
     card.className = 'player-card' + (orderPos === 0 ? ' starter' : '');
     card.innerHTML = `
@@ -699,7 +725,7 @@ function buildDeclareGrid() {
       <div class="role">${orderPos === 0 ? '★ Starter' : isLast ? 'Last (restricted)' : ordinals[orderPos]}</div>
       <input type="number" min="0" max="13" inputmode="numeric" id="decl-${pIdx}"
              data-pindex="${pIdx}" data-order="${orderPos}"
-             oninput="onDeclareInput()" placeholder="—">
+             oninput="onDeclareInput()" placeholder="—" value="${existing ?? ''}">
       <div class="restriction" id="restr-${pIdx}"></div>
     `;
     grid.appendChild(card);
@@ -712,6 +738,9 @@ function buildDeclareGrid() {
   // Wire up auto-advance in declaration order
   const inputIds = order.map(pIdx => `decl-${pIdx}`);
   setupAutoAdvance(inputIds, 'btn-to-part3');
+
+  // Recompute state/UI in case we returned to this screen with existing values
+  onDeclareInput();
 }
 
 function onDeclareInput() {
@@ -813,13 +842,14 @@ function buildActualGrid() {
   grid.innerHTML = '';
 
   state.players.forEach((name, i) => {
+    const existingActual = state.currentRound.actuals?.[i];
     const card = document.createElement('div');
     card.className = 'player-card';
     card.innerHTML = `
       <div class="name">${name}</div>
       <div class="role">Declared: ${state.currentRound.declarations[i]}</div>
       <input type="number" min="0" max="13" inputmode="numeric" id="actual-${i}"
-             oninput="onActualInput(${i})" placeholder="—">
+             oninput="onActualInput(${i})" placeholder="—" value="${existingActual ?? ''}">
       <div class="restriction" id="actual-restr-${i}"></div>
     `;
     grid.appendChild(card);
@@ -830,6 +860,9 @@ function buildActualGrid() {
   // Wire auto-advance
   const inputIds = [0,1,2,3].map(i => `actual-${i}`);
   setupAutoAdvance(inputIds, 'btn-score');
+
+  // Recompute state/UI in case we returned to this screen with existing values
+  onActualInput(-1);
 }
 
 function onActualInput(changedIdx) {
@@ -942,6 +975,7 @@ function showSummary(r) {
 }
 
 function nextRound() {
+  state.currentRound = {};
   selectedSuit = null;
   selectedStarter = null;
   document.querySelectorAll('.suit-btn').forEach(b => b.classList.remove('active'));
@@ -949,6 +983,16 @@ function nextRound() {
   document.getElementById('btn-to-part2').disabled = true;
   updateRoundLabel();
   showScreen('round1');
+}
+
+function backToPart1() {
+  showScreen('round1');
+  checkPart1Ready();
+}
+
+function backToPart2() {
+  buildDeclareGrid();
+  showScreen('round2');
 }
 
 /* ========== SCOREBOARD ========== */
