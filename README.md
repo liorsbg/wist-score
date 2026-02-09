@@ -1,5 +1,5 @@
-# wist-score
-Wist Score Keeper
+# whist-score
+Whist Score Keeper
 
 ## Deploy to Cloudflare Workers
 
