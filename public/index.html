@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wist Scorekeeper</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --felt: #1a5c32;
+    --felt-dark: #0f3d20;
+    --felt-light: #2a7a48;
+    --gold: #d4a843;
+    --gold-light: #e8c876;
+    --gold-dim: #8a6f2a;
+    --cream: #f5f0e1;
+    --cream-dim: #d4cfc0;
+    --red: #c0392b;
+    --red-light: #e74c3c;
+    --green-score: #27ae60;
+    --dark: #1a1a1a;
+    --shadow: rgba(0,0,0,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--felt-dark);
+    color: var(--cream);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(42,122,72,0.4) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(42,122,72,0.3) 0%, transparent 60%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 16px 80px;
+  }
+
+  .header {
+    text-align: center;
+    padding: 30px 0 20px;
+  }
+  .header h1 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: 2.8rem;
+    color: var(--gold);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    letter-spacing: 0.08em;
+  }
+  .header .subtitle {
+    font-size: 0.85rem;
+    color: var(--gold-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .panel {
+    background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+    border: 1px solid rgba(212,168,67,0.2);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(4px);
+  }
+  .panel-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    color: var(--gold);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-title .step {
+    background: var(--gold);
+    color: var(--felt-dark);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  input[type="text"], input[type="number"], select {
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(212,168,67,0.25);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+  input:focus, select:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(212,168,67,0.15);
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    text-align: center;
+  }
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  .btn {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+  }
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    color: var(--felt-dark);
+    box-shadow: 0 4px 16px rgba(212,168,67,0.3);
+  }
+  .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(212,168,67,0.4); }
+  .btn-gold:active { transform: translateY(0); }
+  .btn-gold:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .flex-between { display: flex; align-items: center; justify-content: space-between; }
+  .text-center { text-align: center; }
+  .mt-12 { margin-top: 12px; }
+  .mt-16 { margin-top: 16px; }
+  .mt-8 { margin-top: 8px; }
+
+  .player-input input {
+    font-size: 1.1rem;
+    text-align: center;
+    padding: 12px;
+  }
+
+  .suit-grid {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .suit-btn {
+    width: 56px; height: 56px;
+    border-radius: 12px;
+    border: 2px solid rgba(212,168,67,0.2);
+    background: rgba(0,0,0,0.2);
+    font-size: 1.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .suit-btn:hover { border-color: var(--gold); background: rgba(212,168,67,0.08); }
+  .suit-btn.active {
+    border-color: var(--gold);
+    background: rgba(212,168,67,0.15);
+    box-shadow: 0 0 12px rgba(212,168,67,0.2);
+  }
+  .suit-btn.notrump {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .starter-grid {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .starter-btn {
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 2px solid rgba(212,168,67,0.2);
+    background: rgba(0,0,0,0.2);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .starter-btn:hover { border-color: var(--gold); }
+  .starter-btn.active {
+    border-color: var(--gold);
+    background: rgba(212,168,67,0.15);
+    color: var(--gold);
+  }
+
+  .player-card {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(212,168,67,0.15);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+  .player-card.starter {
+    border-color: var(--gold);
+    box-shadow: 0 0 16px rgba(212,168,67,0.15);
+  }
+  .player-card .name { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+  .player-card .role {
+    font-size: 0.7rem;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+    min-height: 1em;
+  }
+  .player-card input[type="number"] {
+    font-size: 1.4rem;
+    font-weight: 700;
+    padding: 8px;
+    width: 70px;
+    margin: 0 auto;
+  }
+  .player-card .restriction {
+    font-size: 0.75rem;
+    color: var(--red-light);
+    margin-top: 6px;
+    min-height: 1.2em;
+  }
+  .player-card input.autofilled {
+    color: var(--gold);
+    border-color: var(--gold-dim);
+    background: rgba(212,168,67,0.08);
+  }
+
+  .round-type-indicator {
+    text-align: center;
+    padding: 14px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    font-family: 'Playfair Display', serif;
+    transition: all 0.3s;
+    letter-spacing: 0.03em;
+  }
+  .round-type-indicator.over {
+    background: rgba(231,76,60,0.15);
+    border: 1px solid rgba(231,76,60,0.3);
+    color: var(--red-light);
+  }
+  .round-type-indicator.under {
+    background: rgba(39,174,96,0.15);
+    border: 1px solid rgba(39,174,96,0.3);
+    color: var(--green-score);
+  }
+
+  .scoreboard {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  .scoreboard th {
+    font-family: 'Playfair Display', serif;
+    color: var(--gold);
+    padding: 10px 8px;
+    border-bottom: 2px solid rgba(212,168,67,0.3);
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+  .scoreboard td {
+    padding: 8px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    vertical-align: middle;
+  }
+  .scoreboard tr:hover td { background: rgba(255,255,255,0.03); }
+  .scoreboard .round-num { color: var(--gold-dim); font-weight: 600; font-size: 0.8rem; }
+  .scoreboard .score-pos { color: var(--green-score); font-weight: 700; }
+  .scoreboard .score-neg { color: var(--red-light); font-weight: 700; }
+  .scoreboard .score-zero { color: var(--cream-dim); }
+  .scoreboard .nullified td { opacity: 0.35; text-decoration: line-through; }
+  .scoreboard .total-row {
+    border-top: 2px solid rgba(212,168,67,0.4);
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+  .scoreboard .total-row td { padding: 14px 8px; }
+  .scoreboard .spread-row td {
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    color: var(--gold-dim);
+    border-bottom: none;
+  }
+  .spread-value {
+    font-weight: 700;
+    color: var(--gold);
+    font-size: 0.9rem;
+  }
+  .score-detail { font-size: 0.7rem; color: var(--cream-dim); display: block; }
+  .round-badge {
+    display: inline-block;
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .badge-over { background: rgba(231,76,60,0.2); color: var(--red-light); }
+  .badge-under { background: rgba(39,174,96,0.2); color: var(--green-score); }
+  .badge-null { background: rgba(255,255,255,0.1); color: var(--cream-dim); }
+
+  .result-card {
+    background: rgba(0,0,0,0.25);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+  }
+  .result-card .name { font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; }
+  .result-card .declared { font-size: 0.75rem; color: var(--cream-dim); }
+  .result-card .actual { font-size: 0.75rem; color: var(--cream-dim); margin-bottom: 4px; }
+  .result-card .points {
+    font-size: 1.5rem;
+    font-weight: 900;
+    font-family: 'Playfair Display', serif;
+  }
+  .result-card .points.pos { color: var(--green-score); }
+  .result-card .points.neg { color: var(--red-light); }
+  .result-card.success { border: 1px solid rgba(39,174,96,0.4); }
+  .result-card.fail { border: 1px solid rgba(231,76,60,0.3); }
+
+  .nullified-banner {
+    background: rgba(231,76,60,0.15);
+    border: 1px solid rgba(231,76,60,0.3);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    color: var(--red-light);
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .leader-badge {
+    display: inline-block;
+    background: var(--gold);
+    color: var(--felt-dark);
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  .undo-link {
+    color: var(--gold-dim);
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.2s;
+  }
+  .undo-link:hover { color: var(--gold); }
+
+  .hidden { display: none !important; }
+
+  .trick-sum {
+    font-size: 0.9rem;
+    padding: 8px 16px;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: 600;
+  }
+  .trick-sum.valid { background: rgba(39,174,96,0.15); color: var(--green-score); }
+  .trick-sum.invalid { background: rgba(231,76,60,0.15); color: var(--red-light); }
+  .trick-sum.neutral { background: rgba(255,255,255,0.05); color: var(--cream-dim); }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-in { animation: fadeInUp 0.35s ease-out both; }
+
+  @media (max-width: 600px) {
+    .header h1 { font-size: 2rem; }
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .panel { padding: 18px; }
+    .scoreboard { font-size: 0.78rem; }
+    .scoreboard th { font-size: 0.85rem; padding: 8px 4px; }
+    .scoreboard td { padding: 6px 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container" id="app">
+  <div class="header">
+    <h1>♠ Wist ♠</h1>
+    <div class="subtitle">Score Keeper</div>
+  </div>
+
+  <!-- SETUP -->
+  <div id="screen-setup">
+    <div class="panel animate-in">
+      <div class="panel-title">Player Names</div>
+      <div class="grid-4">
+        <div class="player-input"><label>Player 1</label><input type="text" id="p1name" value="Player 1" onfocus="this.select()"></div>
+        <div class="player-input"><label>Player 2</label><input type="text" id="p2name" value="Player 2" onfocus="this.select()"></div>
+        <div class="player-input"><label>Player 3</label><input type="text" id="p3name" value="Player 3" onfocus="this.select()"></div>
+        <div class="player-input"><label>Player 4</label><input type="text" id="p4name" value="Player 4" onfocus="this.select()"></div>
+      </div>
+      <div class="text-center mt-16">
+        <button class="btn btn-gold" onclick="startGame()">Start Game</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PART 1: Koser + Starter -->
+  <div id="screen-round1" class="hidden">
+    <div class="panel animate-in">
+      <div class="panel-title"><span class="step">1</span> Round <span id="round-number-label">1</span> — Koser &amp; Starter</div>
+
+      <label>Koser (Trump)</label>
+      <div class="suit-grid mt-8">
+        <button class="suit-btn" data-suit="♠" onclick="setSuit('♠')">♠</button>
+        <button class="suit-btn" data-suit="♥" onclick="setSuit('♥')">♥</button>
+        <button class="suit-btn" data-suit="♦" onclick="setSuit('♦')">♦</button>
+        <button class="suit-btn" data-suit="♣" onclick="setSuit('♣')">♣</button>
+        <button class="suit-btn notrump" data-suit="NT" onclick="setSuit('NT')">NT</button>
+      </div>
+
+      <div class="mt-16">
+        <label>Starting Player (Declares First)</label>
+        <div class="starter-grid mt-8" id="starter-grid"></div>
+      </div>
+
+      <div class="text-center mt-16">
+        <button class="btn btn-gold" id="btn-to-part2" onclick="toPart2()" disabled>Continue to Declarations</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PART 2: Declarations -->
+  <div id="screen-round2" class="hidden">
+    <div class="panel animate-in">
+      <div class="panel-title"><span class="step">2</span> Declare Tricks</div>
+      <div id="round-info" style="font-size:0.85rem;color:var(--cream-dim);margin-bottom:16px;"></div>
+      <div class="grid-4" id="declare-grid"></div>
+      <div class="mt-12" id="trick-sum-display"></div>
+      <div class="mt-12" id="over-under-display"></div>
+      <div class="text-center mt-16">
+        <button class="btn btn-gold" id="btn-to-part3" onclick="toPart3()" disabled>Lock Declarations</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PART 3: Actual Tricks -->
+  <div id="screen-round3" class="hidden">
+    <div class="panel animate-in">
+      <div class="panel-title"><span class="step">3</span> Actual Tricks Taken</div>
+      <div id="round-info2" style="font-size:0.85rem;color:var(--cream-dim);margin-bottom:16px;"></div>
+      <div class="grid-4" id="actual-grid"></div>
+      <div class="mt-12" id="actual-sum-display"></div>
+      <div class="text-center mt-16">
+        <button class="btn btn-gold" id="btn-score" onclick="scoreRound()" disabled>Score Round</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROUND SUMMARY -->
+  <div id="screen-summary" class="hidden">
+    <div class="panel animate-in">
+      <div class="panel-title">Round Result</div>
+      <div id="nullified-msg" class="hidden"></div>
+      <div class="grid-4" id="result-grid"></div>
+      <div class="text-center mt-16">
+        <button class="btn btn-gold" onclick="nextRound()">Next Round</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCOREBOARD -->
+  <div id="scoreboard-wrap" class="hidden">
+    <div class="panel">
+      <div class="flex-between">
+        <div class="panel-title" style="margin-bottom:0;">Scoreboard</div>
+        <span class="undo-link hidden" id="undo-btn" onclick="undoLastRound()">Undo last</span>
+      </div>
+      <div style="overflow-x:auto;margin-top:12px;">
+        <table class="scoreboard">
+          <thead>
+            <tr>
+              <th style="text-align:left">#</th>
+              <th id="th-p1"></th>
+              <th id="th-p2"></th>
+              <th id="th-p3"></th>
+              <th id="th-p4"></th>
+            </tr>
+          </thead>
+          <tbody id="scoreboard-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const state = { players: [], rounds: [], currentRound: {} };
+let selectedSuit = null;
+let selectedStarter = null;
+
+/* ========== UTILITY: Auto-advance on single digit ========== */
+// Ordered list of input IDs for the current screen, set per screen
+let currentInputOrder = [];
+
+function setupAutoAdvance(inputIds, submitBtnId) {
+  currentInputOrder = inputIds;
+  inputIds.forEach((id, idx) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    // Select all on focus
+    el.addEventListener('focus', () => {
+      setTimeout(() => el.select(), 0);
+    });
+
+    // Auto-advance on single digit
+    el.addEventListener('input', () => {
+      const val = el.value;
+      // Single digit 0-9: advance immediately
+      if (/^[0-9]$/.test(val)) {
+        const nextIdx = idx + 1;
+        if (nextIdx < inputIds.length) {
+          const nextEl = document.getElementById(inputIds[nextIdx]);
+          if (nextEl) {
+            setTimeout(() => nextEl.focus(), 30);
+          }
+        } else {
+          // Last input — focus the submit button
+          const btn = document.getElementById(submitBtnId);
+          if (btn) setTimeout(() => { el.blur(); btn.focus(); }, 30);
+        }
+      }
+    });
+
+    // Enter key to advance or submit
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const nextIdx = idx + 1;
+        if (nextIdx < inputIds.length) {
+          document.getElementById(inputIds[nextIdx])?.focus();
+        } else {
+          const btn = document.getElementById(submitBtnId);
+          if (btn && !btn.disabled) btn.click();
+        }
+      }
+    });
+  });
+}
+
+/* ========== SETUP ========== */
+
+function startGame() {
+  state.players = [
+    document.getElementById('p1name').value.trim() || 'Player 1',
+    document.getElementById('p2name').value.trim() || 'Player 2',
+    document.getElementById('p3name').value.trim() || 'Player 3',
+    document.getElementById('p4name').value.trim() || 'Player 4',
+  ];
+  for (let i = 0; i < 4; i++) document.getElementById(`th-p${i+1}`).textContent = state.players[i];
+  showScreen('round1');
+  document.getElementById('scoreboard-wrap').classList.remove('hidden');
+  buildStarterGrid();
+  updateScoreboard();
+  updateRoundLabel();
+}
+
+function showScreen(name) {
+  ['setup','round1','round2','round3','summary'].forEach(s =>
+    document.getElementById(`screen-${s}`).classList.add('hidden'));
+  const el = document.getElementById(`screen-${name}`);
+  el.classList.remove('hidden');
+  el.querySelectorAll('.panel').forEach(p => {
+    p.classList.remove('animate-in');
+    void p.offsetWidth;
+    p.classList.add('animate-in');
+  });
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function updateRoundLabel() {
+  document.getElementById('round-number-label').textContent = state.rounds.length + 1;
+}
+
+function setSuit(suit) {
+  selectedSuit = suit;
+  document.querySelectorAll('.suit-btn').forEach(b => b.classList.toggle('active', b.dataset.suit === suit));
+  checkPart1Ready();
+}
+
+function buildStarterGrid() {
+  const grid = document.getElementById('starter-grid');
+  grid.innerHTML = '';
+  state.players.forEach((name, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'starter-btn';
+    btn.textContent = name;
+    btn.onclick = () => {
+      selectedStarter = i;
+      document.querySelectorAll('.starter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      checkPart1Ready();
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function checkPart1Ready() {
+  document.getElementById('btn-to-part2').disabled = !(selectedSuit !== null && selectedStarter !== null);
+}
+
+/* ========== PART 2: DECLARATIONS ========== */
+
+function toPart2() {
+  state.currentRound = {
+    suit: selectedSuit,
+    starter: selectedStarter,
+    declarations: [null, null, null, null],
+    actuals: [null, null, null, null],
+    type: null,
+  };
+
+  const suitDisplay = selectedSuit === 'NT' ? 'No Trump' : selectedSuit;
+  document.getElementById('round-info').innerHTML =
+    `Round ${state.rounds.length + 1} &nbsp;·&nbsp; Koser: ${suitDisplay} &nbsp;·&nbsp; ${state.players[selectedStarter]} declares first`;
+
+  buildDeclareGrid();
+  showScreen('round2');
+
+  // Focus first input after transition
+  const order = getPlayerOrder();
+  setTimeout(() => document.getElementById(`decl-${order[0]}`)?.focus(), 400);
+}
+
+function getPlayerOrder() {
+  const order = [];
+  for (let i = 0; i < 4; i++) order.push((state.currentRound.starter + i) % 4);
+  return order;
+}
+
+function buildDeclareGrid() {
+  const grid = document.getElementById('declare-grid');
+  grid.innerHTML = '';
+  const order = getPlayerOrder();
+  const ordinals = ['1st', '2nd', '3rd', '4th'];
+
+  order.forEach((pIdx, orderPos) => {
+    const isLast = orderPos === 3;
+    const card = document.createElement('div');
+    card.className = 'player-card' + (orderPos === 0 ? ' starter' : '');
+    card.innerHTML = `
+      <div class="name">${state.players[pIdx]}</div>
+      <div class="role">${orderPos === 0 ? '★ Starter' : isLast ? 'Last (restricted)' : ordinals[orderPos]}</div>
+      <input type="number" min="0" max="13" inputmode="numeric" id="decl-${pIdx}"
+             data-pindex="${pIdx}" data-order="${orderPos}"
+             oninput="onDeclareInput()" placeholder="—">
+      <div class="restriction" id="restr-${pIdx}"></div>
+    `;
+    grid.appendChild(card);
+  });
+
+  document.getElementById('over-under-display').innerHTML = '';
+  document.getElementById('trick-sum-display').innerHTML = '';
+  document.getElementById('btn-to-part3').disabled = true;
+
+  // Wire up auto-advance in declaration order
+  const inputIds = order.map(pIdx => `decl-${pIdx}`);
+  setupAutoAdvance(inputIds, 'btn-to-part3');
+}
+
+function onDeclareInput() {
+  const order = getPlayerOrder();
+  let sum = 0;
+  let allFilled = true;
+  const values = [];
+
+  order.forEach((pIdx, orderPos) => {
+    const input = document.getElementById(`decl-${pIdx}`);
+    const raw = input.value;
+    const val = raw === '' ? null : parseInt(raw);
+    values.push({ pIdx, val, orderPos });
+    if (val === null || isNaN(val)) allFilled = false;
+    else sum += val;
+  });
+
+  // Restriction for last player
+  const lastPlayer = order[3];
+  const restEl = document.getElementById(`restr-${lastPlayer}`);
+  const othersSum = values.filter(v => v.orderPos < 3).reduce((s, v) => s + (v.val || 0), 0);
+  const othersFilled = values.filter(v => v.orderPos < 3).every(v => v.val !== null && !isNaN(v.val));
+  let lastViolates = false;
+
+  if (othersFilled) {
+    const forbidden = 13 - othersSum;
+    if (forbidden >= 0 && forbidden <= 13) {
+      restEl.textContent = `Can't declare ${forbidden}`;
+      restEl.style.fontWeight = '';
+    } else {
+      restEl.textContent = '';
+    }
+    const lastVal = values.find(v => v.orderPos === 3).val;
+    if (lastVal !== null && !isNaN(lastVal) && lastVal === forbidden && forbidden >= 0 && forbidden <= 13) {
+      restEl.textContent = `❌ Can't declare ${forbidden}!`;
+      restEl.style.fontWeight = '700';
+      lastViolates = true;
+    }
+  } else {
+    restEl.textContent = '';
+  }
+
+  const sumEl = document.getElementById('trick-sum-display');
+  const ouEl = document.getElementById('over-under-display');
+
+  if (allFilled) {
+    const isValid = sum !== 13 && !lastViolates;
+    sumEl.innerHTML = `<div class="trick-sum ${isValid ? 'valid' : 'invalid'}">
+      Total declared: <strong>${sum}</strong> / 13 tricks
+      ${sum === 13 ? '— sum cannot equal 13' : lastViolates ? '— last player restriction violated' : '✓'}
+    </div>`;
+
+    if (isValid) {
+      const roundType = sum > 13 ? 'over' : 'under';
+      const diff = Math.abs(sum - 13);
+      ouEl.innerHTML = `<div class="round-type-indicator ${roundType}">
+        ${roundType === 'over'
+          ? `↑ OVER by ${diff}`
+          : `↓ UNDER by ${diff}`}
+      </div>`;
+      state.currentRound.type = roundType;
+    } else {
+      ouEl.innerHTML = '';
+      state.currentRound.type = null;
+    }
+    document.getElementById('btn-to-part3').disabled = !isValid;
+  } else {
+    sumEl.innerHTML = `<div class="trick-sum neutral">Declared so far: ${sum} / 13</div>`;
+    ouEl.innerHTML = '';
+    document.getElementById('btn-to-part3').disabled = true;
+  }
+
+  values.forEach(v => {
+    state.currentRound.declarations[v.pIdx] = (v.val !== null && !isNaN(v.val)) ? v.val : null;
+  });
+}
+
+/* ========== PART 3: ACTUAL TRICKS ========== */
+
+function toPart3() {
+  const r = state.currentRound;
+  const suitDisplay = r.suit === 'NT' ? 'No Trump' : r.suit;
+  const declSum = r.declarations.reduce((a, b) => a + b, 0);
+  const typeLabel = r.type === 'over' ? '↑ Over' : '↓ Under';
+  const decls = state.players.map((n, i) => `${n}: <strong>${r.declarations[i]}</strong>`).join(' &nbsp;·&nbsp; ');
+
+  document.getElementById('round-info2').innerHTML =
+    `${suitDisplay} &nbsp;·&nbsp; ${typeLabel} (sum ${declSum}) &nbsp;·&nbsp; ${decls}`;
+
+  buildActualGrid();
+  showScreen('round3');
+
+  // Focus first input
+  setTimeout(() => document.getElementById('actual-0')?.focus(), 400);
+}
+
+function buildActualGrid() {
+  const grid = document.getElementById('actual-grid');
+  grid.innerHTML = '';
+
+  state.players.forEach((name, i) => {
+    const card = document.createElement('div');
+    card.className = 'player-card';
+    card.innerHTML = `
+      <div class="name">${name}</div>
+      <div class="role">Declared: ${state.currentRound.declarations[i]}</div>
+      <input type="number" min="0" max="13" inputmode="numeric" id="actual-${i}"
+             oninput="onActualInput(${i})" placeholder="—">
+      <div class="restriction" id="actual-restr-${i}"></div>
+    `;
+    grid.appendChild(card);
+  });
+  document.getElementById('actual-sum-display').innerHTML = '';
+  document.getElementById('btn-score').disabled = true;
+
+  // Wire auto-advance
+  const inputIds = [0,1,2,3].map(i => `actual-${i}`);
+  setupAutoAdvance(inputIds, 'btn-score');
+}
+
+function onActualInput(changedIdx) {
+  let sum = 0;
+  let filledCount = 0;
+  let emptyIdx = -1;
+
+  for (let i = 0; i < 4; i++) {
+    const input = document.getElementById(`actual-${i}`);
+    const val = input.value === '' ? null : parseInt(input.value);
+    if (val !== null && !isNaN(val)) {
+      sum += val;
+      filledCount++;
+      state.currentRound.actuals[i] = val;
+    } else {
+      emptyIdx = i;
+    }
+  }
+
+  // Auto-fill last remaining player (since total must be 13)
+  if (filledCount === 3 && emptyIdx >= 0) {
+    const remaining = 13 - sum;
+    if (remaining >= 0 && remaining <= 13) {
+      const lastInput = document.getElementById(`actual-${emptyIdx}`);
+      lastInput.value = remaining;
+      lastInput.classList.add('autofilled');
+      state.currentRound.actuals[emptyIdx] = remaining;
+      sum += remaining;
+      filledCount = 4;
+    }
+  }
+
+  // Clear autofill styling on manual edit
+  for (let i = 0; i < 4; i++) {
+    const input = document.getElementById(`actual-${i}`);
+    if (i === changedIdx) input.classList.remove('autofilled');
+  }
+
+  const allFilled = filledCount === 4;
+  const sumEl = document.getElementById('actual-sum-display');
+
+  if (allFilled) {
+    const isValid = sum === 13;
+    sumEl.innerHTML = `<div class="trick-sum ${isValid ? 'valid' : 'invalid'}">
+      Total: <strong>${sum}</strong> / 13 ${isValid ? '✓' : '— must equal 13'}
+    </div>`;
+    document.getElementById('btn-score').disabled = !isValid;
+  } else {
+    sumEl.innerHTML = `<div class="trick-sum neutral">Total so far: ${sum} / 13</div>`;
+    document.getElementById('btn-score').disabled = true;
+  }
+}
+
+/* ========== SCORING ========== */
+
+function calcScore(declared, actual, roundType) {
+  if (declared === 0) {
+    if (actual === 0) return roundType === 'under' ? 50 : 25;
+    return -(60 - 10 * actual);
+  }
+  if (declared === actual) return declared * declared + 10;
+  return -10 * Math.abs(declared - actual);
+}
+
+function scoreRound() {
+  const r = state.currentRound;
+  r.scores = [];
+  let anySuccess = false;
+
+  for (let i = 0; i < 4; i++) {
+    r.scores.push(calcScore(r.declarations[i], r.actuals[i], r.type));
+    if (r.declarations[i] === r.actuals[i]) anySuccess = true;
+  }
+
+  r.nullified = !anySuccess;
+  state.rounds.push({ ...r });
+  showSummary(r);
+  updateScoreboard();
+}
+
+function showSummary(r) {
+  const nullMsg = document.getElementById('nullified-msg');
+  if (r.nullified) {
+    nullMsg.className = 'nullified-banner';
+    nullMsg.textContent = 'No one made their declaration — round nullified!';
+  } else {
+    nullMsg.className = 'hidden';
+  }
+
+  const grid = document.getElementById('result-grid');
+  grid.innerHTML = '';
+
+  state.players.forEach((name, i) => {
+    const made = r.declarations[i] === r.actuals[i];
+    const diff = r.actuals[i] - r.declarations[i];
+    const card = document.createElement('div');
+    card.className = `result-card ${made ? 'success' : 'fail'}`;
+    card.innerHTML = `
+      <div class="name">${name}</div>
+      <div class="declared">Declared: ${r.declarations[i]}</div>
+      <div class="actual">Taken: ${r.actuals[i]} ${made ? '✓' : `(${diff > 0 ? '+' : ''}${diff})`}</div>
+      <div class="points ${r.nullified ? '' : (r.scores[i] >= 0 ? 'pos' : 'neg')}">
+        ${r.nullified ? '— nullified' : (r.scores[i] > 0 ? '+' : '') + r.scores[i]}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  showScreen('summary');
+}
+
+function nextRound() {
+  selectedSuit = null;
+  selectedStarter = null;
+  document.querySelectorAll('.suit-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.starter-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-to-part2').disabled = true;
+  updateRoundLabel();
+  showScreen('round1');
+}
+
+/* ========== SCOREBOARD ========== */
+
+function updateScoreboard() {
+  const tbody = document.getElementById('scoreboard-body');
+  tbody.innerHTML = '';
+
+  if (state.rounds.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--cream-dim);padding:20px;font-size:0.85rem;">No rounds played yet</td></tr>`;
+    document.getElementById('undo-btn').classList.add('hidden');
+    return;
+  }
+
+  document.getElementById('undo-btn').classList.remove('hidden');
+  const totals = [0, 0, 0, 0];
+
+  state.rounds.forEach((r, idx) => {
+    const tr = document.createElement('tr');
+    if (r.nullified) tr.className = 'nullified';
+
+    const suitLabel = r.suit === 'NT' ? 'NT' : r.suit;
+    const badgeClass = r.nullified ? 'badge-null' : r.type === 'over' ? 'badge-over' : 'badge-under';
+    const badgeText = r.nullified ? 'NULL' : r.type === 'over' ? 'OVER' : 'UNDER';
+
+    let html = `<td class="round-num" style="text-align:left">
+      ${idx + 1} ${suitLabel}<br>
+      <span class="round-badge ${badgeClass}">${badgeText}</span>
+    </td>`;
+
+    for (let i = 0; i < 4; i++) {
+      if (r.nullified) {
+        html += `<td><span class="score-zero">0</span><span class="score-detail">${r.declarations[i]}→${r.actuals[i]}</span></td>`;
+      } else {
+        const s = r.scores[i];
+        totals[i] += s;
+        const cls = s > 0 ? 'score-pos' : s < 0 ? 'score-neg' : 'score-zero';
+        html += `<td><span class="${cls}">${s > 0 ? '+' : ''}${s}</span><span class="score-detail">${r.declarations[i]}→${r.actuals[i]}</span></td>`;
+      }
+    }
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  });
+
+  // Total row
+  const maxTotal = Math.max(...totals);
+  const totalTr = document.createElement('tr');
+  totalTr.className = 'total-row';
+  let html = `<td style="text-align:left;color:var(--gold)">Total</td>`;
+  for (let i = 0; i < 4; i++) {
+    const cls = totals[i] > 0 ? 'score-pos' : totals[i] < 0 ? 'score-neg' : 'score-zero';
+    const leader = totals[i] === maxTotal ? '<span class="leader-badge">LEAD</span>' : '';
+    html += `<td><span class="${cls}">${totals[i] > 0 ? '+' : ''}${totals[i]}</span>${leader}</td>`;
+  }
+  totalTr.innerHTML = html;
+  tbody.appendChild(totalTr);
+
+  // Spread row
+  const hi = Math.max(...totals);
+  const lo = Math.min(...totals);
+  const spread = hi - lo;
+  const spreadTr = document.createElement('tr');
+  spreadTr.className = 'spread-row';
+  let spreadHtml = `<td style="text-align:left;">Spread</td>`;
+  for (let i = 0; i < 4; i++) {
+    const diff = totals[i] - hi; // distance from leader (0 or negative)
+    if (diff === 0) {
+      spreadHtml += `<td><span class="spread-value">—</span></td>`;
+    } else {
+      spreadHtml += `<td><span class="spread-value">${diff}</span></td>`;
+    }
+  }
+  spreadTr.innerHTML = spreadHtml;
+  tbody.appendChild(spreadTr);
+}
+
+function undoLastRound() {
+  if (state.rounds.length === 0) return;
+  if (!confirm('Remove the last round?')) return;
+  state.rounds.pop();
+  updateScoreboard();
+  updateRoundLabel();
+}
+</script>
+</body>
+</html>
